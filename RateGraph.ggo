@@ -1,0 +1,49 @@
+# Name of your program
+package "RateGraph"
+purpose "Constructs and processes a rate graph from .dsu file\n\
+  input: (stdin) .dsu file -- graph in dsu format from BHGbuilder\n\
+  output: (stdout) rates for treekin\n\
+          additional: see options under \"Output\" section"
+
+# Version of your program
+version "0.1"   # don't use version if you're using automake
+
+# command line options passed to gengetopt
+args "--file-name=RateGraph_cmdline --include-getopt --default-optional --unamed-opts"
+
+# Options
+option "debug"        			- "Print debug" flag off
+option "max"								n "Maximal number of nodes remaining after removal (default all)" int no
+option "fraction"           - "Fraction of connections after which program stops individual computation and computes the Shur complement." int default="50" no
+option "Shur-step"          - "Step in Shur transformation (affects speed - very high and very low values are not recommended)" int default="20" no
+option "filter"             f "Filename with local minima, which should not be filtered out (skips identification of minima step)" string no
+option "ordering"           o "Method for identifying minima to remove. Filtering option overrides this. \nE ==> remove highest energy minima first\nC ==> remove minima with least number of connections first" default="C" string no
+
+section "Output"
+option "dot"                - "Use dot instead of neato for graph plotting" flag on
+option "dot-energies"       - "Print energies along with the LM number in graph" flag off
+option "tree-visualise"     t "Use tree visualisation (landmark)" flag off
+option "print-full"         - "Print matrices for all found LM. (default is print only for input, this influences ALL matrices) (switches on --print-energy flag)" flag off
+
+option "get-path"           - "Get path between 2 local minima and print it into file pathL1_L2.path" typestr="<l1>=<l2>" string multiple
+
+option "dot-file"					  - "Filename for dot graph file" string default="DSUeval.dot" no
+option "graph-file"					- "Filename for landmap/landmark graph image (does not print by default)" string no
+option "barr-file"          - "Filename for barrier-like output - does not contain all information (does not print by default)" string no
+option "energy-file"        - "Fileneme for energy barrier matrix (does not print by default)" string no
+option "dist-file"          - "Filename for distance matrix (does not print by default)" string no
+option "gdist-file"         - "Filename for graph distance matrix (does not print by default)" string no
+option "rates-file"         r "Filename for rates for treekin (does not print by default, appends mode_rates on end of filename)" string no
+option "print-all"          - "generate all output (switches on all text '*-file' to default)" flag off
+option "rates-temp"         T "Temperature for rates (in Celsius)" float default="37.0" no
+option "rates-mode"         - "Mode for rates generation (V - vertex contraction, taking into acount only max_height; S - vertex contraction, taking into acount path; E - edge contraction (minimal barrier); M - edge contraction (maximal barrier); F - full matrix for all LMs)" string default="F" multiple no
+
+option "visualise"          v "Visualise paths between 2 structures, can be specified multiple times, output goes to file pathL1_L2.eps" typestr="<l1>=<l2>" string multiple
+option "vis-dist"           - "Set distance as a bounding condition for visualisation (instead of energy)" flag off
+option "vis-length"         - "Set maximal length of paths in visualisation (increases computation time greatly) use only with vis-dist off" int default="15" no
+
+section "Evaluation"
+option "energy-heights"     - "output energies of saddles between every pair of structures (filename)" string no
+option "energy-rank"        - "output sorted energies of saddles between minima (filename)" string no
+option "energy-barrier"			- "output sorted barrier heights between minima (filename)" string no
+option "analyze-graph"			- "Analyze graph - histogram of connectivity, ..." flag off
