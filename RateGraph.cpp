@@ -67,6 +67,14 @@ RateGraph::RateGraph(DSU &dsu, double temp)
 RateGraph::~RateGraph()
 {
   if (rate_matrix) free(rate_matrix);
+  for (auto it=filter.begin(); it!=filter.end(); it++) {
+    free(it->structure);
+    if (it->str_ch) free(it->str_ch);
+  }
+  for (unsigned int i=0; i<lms.size(); i++) {
+    free(lms[i].structure);
+    if (lms[i].str_ch) free(lms[i].str_ch);
+  }
 }
 
 int RateGraph::ConstructQueue(char order, int number_remove)
@@ -190,22 +198,22 @@ int RateGraph::RemoveX(int x, int stop_fraction)
   auto it_rem = removed.begin();
   for(unsigned int i=0, j=0; i<rates.size(); i++) {
     if (it_rem==removed.end() || *it_rem != (int)i) {
-      map_rem[i] = j;
+      lm_to_pos[i] = j;
       j++;
     } else {
       if (it_rem!=removed.end()) it_rem++;
     }
   }
-  vec_rem.resize(map_rem.size());
-  for (auto it=map_rem.begin(); it!=map_rem.end(); it++) {
-    vec_rem[it->second] = it->first;
+  pos_to_lm.resize(lm_to_pos.size());
+  for (auto it=lm_to_pos.begin(); it!=lm_to_pos.end(); it++) {
+    pos_to_lm[it->second] = it->first;
   }
 
   // rewrite rates vector:
   for (unsigned int i=0; i<rates.size(); i++) {
     map<int, double> tmp;
     for (auto it=rates[i].begin(); it!=rates[i].end(); it++) {
-      tmp.insert(make_pair(map_rem[it->first], it->second));
+      tmp.insert(make_pair(lm_to_pos[it->first], it->second));
     }
     rates[i] = tmp;
   }
@@ -218,8 +226,8 @@ int RateGraph::RemoveX(int x, int stop_fraction)
   rates.resize(rates.size()-removed.size());
 
   // print the conversion
-  for (unsigned int i=0; i<vec_rem.size(); i++) {
-    fprintf(stderr, "%8d -> %8d\n", vec_rem[i]+1, i+1);
+  for (unsigned int i=0; i<pos_to_lm.size(); i++) {
+    fprintf(stderr, "%8d -> %8d\n", pos_to_lm[i]+1, i+1);
   }
 
 
@@ -230,6 +238,7 @@ int RateGraph::RemoveX(int x, int stop_fraction)
 void SwapMinima(int dim_rates, double *rate_matrix, int a, int b)
 {
   for (int i=0; i<dim_rates; i++) {
+    //fprintf(stderr, "swapping %5d %5d %d (%d)\n", a, b, dim_rates, i );
     // change lines:
     swap(rate_matrix[a*dim_rates+i], rate_matrix[b*dim_rates+i]);
     // change columns
@@ -318,11 +327,12 @@ void MxRShorten(double **shorten, int fulldim, int gdim)
 
 int RateGraph::RemoveShur(int x, int step)
 {
+  //fprintf(stderr, "calling Shur %5d %5d\n", x, step );
   // get set to remove:
   set<int> to_remove;
   while ((int)to_remove.size() != x) {
     pq_rate tmp = to_rem.top(); to_rem.pop();
-    to_remove.insert(tmp.lm);
+    to_remove.insert(lm_to_pos[tmp.lm]);
   }
 
   //build rate matrix:
@@ -341,26 +351,21 @@ int RateGraph::RemoveShur(int x, int step)
   }
 
   // now resort matrix to have the minima to remove on bottom.
-  vector<int> lm_to_pos (dim_rates);
-  vector<int> pos_to_lm (dim_rates);
-  for(unsigned int i=0; i<dim_rates; i++) {
-    pos_to_lm[i] = i;
-  }
   int i=dim_rates-1;
-  for (auto it=to_remove.end(); it!=to_remove.begin(); it--, i--) {
+  for (set<int>::reverse_iterator it=to_remove.rbegin(); it!=to_remove.rend(); it++, i--) {
+    //fprintf(stderr, "calling Shur %5d %5d\n", *it, i );
     // exchange lines (and columns) *it and i
     SwapMinima(dim_rates, rate_matrix, *it, i);
+
     swap(pos_to_lm[*it], pos_to_lm[i]);
-  }
-  for(unsigned int i=0; i<dim_rates; i++) {
-    lm_to_pos[pos_to_lm[i]] = i;
+    swap(lm_to_pos[pos_to_lm[*it]], lm_to_pos[pos_to_lm[i]]);
   }
 
+  fprintf(stderr, "calling Shur %5d %5d\n", x, step );
 
   // finally run removal on that matrix
   int res_dim = dim_rates-x;
   while ((int)dim_rates > res_dim) {
-
     // reduce of:
     int reduce = min(step, (int)dim_rates-res_dim);
     // now Shur it!
@@ -368,8 +373,14 @@ int RateGraph::RemoveShur(int x, int step)
     dim_rates -= reduce;
     // report:
     fprintf(stderr, "reduced dimension from %8d to %8d\n", dim_rates+reduce, dim_rates);
-
   }
+
+  // add those, that we have removed
+  for (unsigned int i=res_dim; i<dim_rates; i++) {
+    removed.insert(pos_to_lm[i]);
+    lm_to_pos.erase(pos_to_lm[i]);
+  }
+  pos_to_lm.resize(res_dim);
 
   return x;
 }

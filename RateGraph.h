@@ -153,9 +153,11 @@ class RateGraph
 {
   // rates
   vector < map<int, double> > rates;
+
+  // removed:
   set <int> removed;
-  map <int, int> map_rem;
-  vector<int> vec_rem;
+  map <int, int> lm_to_pos;
+  vector<int> pos_to_lm;
 
   // int
   int edge_count;
@@ -171,12 +173,16 @@ class RateGraph
   vector<RNAlocmin> lms;
   set<RNAstruc> filter;
 
+  // redirection of local minima
+
 public:
   RateGraph(DSU &dsu, double temp);
   ~RateGraph();
 
   int ReadFilter(char *filename);
   int ConstructQueue(char order, int number_remove);
+
+  void PrintDot(FILE *filename); \todo
 
   int RemoveOne(int rem_lm);
   int RemoveX(int x, int stop_fraction = 50);
