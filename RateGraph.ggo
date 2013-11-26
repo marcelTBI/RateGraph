@@ -18,6 +18,7 @@ option "fraction"           - "Fraction of connections after which program stops
 option "Shur-step"          - "Step in Shur transformation (affects speed - very high and very low values are not recommended)" int default="20" no
 option "filter"             f "Filename with local minima, which should not be filtered out (skips identification of minima step)" string no
 option "ordering"           o "Method for identifying minima to remove. Filtering option overrides this. \nE ==> remove highest energy minima first\nC ==> remove minima with least number of connections first" default="C" string no
+option "reeval-conn"        - "Re-evaluate the connection number after removal of each edge. Only for individual computation." flag off
 
 section "Output"
 option "dot"                - "Use dot instead of neato for graph plotting" flag on

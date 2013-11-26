@@ -186,7 +186,7 @@ public:
   void PrintDot(char *filename, bool to_eps);
 
   int RemoveOne(int rem_lm);
-  int RemoveX(int x, int stop_fraction = 50);
+  int RemoveX(int x, int stop_fraction = 50, bool reeval = false);
   int RemoveShur(int x, int step);
 
   void PrintRates(char *filename);

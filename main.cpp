@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     }
     rg.ConstructQueue(args_info.ordering_arg[0], args_info.max_arg);
     fprintf(stderr, "creating graph took %.2f secs.\n", (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
-    int x = rg.RemoveX(dsu.Size()-args_info.max_arg, args_info.fraction_arg);
+    int x = rg.RemoveX(dsu.Size()-args_info.max_arg, args_info.fraction_arg, args_info.reeval_conn_flag);
     fprintf(stderr, "removal of %d lm took %.2f secs.\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
     x = rg.RemoveShur(dsu.Size()-args_info.max_arg-x, args_info.Shur_step_arg);
     fprintf(stderr, "removal of %d lm took %.2f secs.\n", x, (clock()-time)/(double)CLOCKS_PER_SEC); time = clock();
