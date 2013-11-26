@@ -60,6 +60,13 @@ RateGraph::RateGraph(DSU &dsu, double temp)
     lms[i].recompute_str();
   }
 
+  // maps:
+  pos_to_lm.resize(lms.size());
+  for (unsigned int i=0; i<lms.size(); i++) {
+    pos_to_lm[i] = i;
+    lm_to_pos[i] = i;
+  }
+
   // null it.
   rate_matrix = NULL;
 }
@@ -186,6 +193,11 @@ int RateGraph::RemoveX(int x, int stop_fraction)
     // debug:
     if (count%10000 == 0 || (pqr.conns>100 && count%1000==0) || (pqr.conns>150 && count%100==0)) fprintf(stderr, "removing node %8d (%8d remaining) (conns=%4d, energy=%6.2f)\n", count, (int)rates.size()-count, pqr.conns, pqr.energy/100.0);
 
+    // debug
+    char name[100];
+    sprintf(name, "test%d.dot", (int)rates.size()-count);
+    PrintDot(name, true);
+
     // remove it:
     int new_edges = RemoveOne(pqr.lm);
     removed.insert(pqr.lm);
@@ -193,8 +205,13 @@ int RateGraph::RemoveX(int x, int stop_fraction)
     count++;
   }
 
+  // debug
+  char name[100];
+  sprintf(name, "test%d.dot", (int)rates.size()-count);
+  PrintDot(name, true);
+
   // reduce size of rates vector:
-  //create a map
+  // update maps:
   auto it_rem = removed.begin();
   for(unsigned int i=0, j=0; i<rates.size(); i++) {
     if (it_rem==removed.end() || *it_rem != (int)i) {
@@ -230,7 +247,6 @@ int RateGraph::RemoveX(int x, int stop_fraction)
     fprintf(stderr, "%8d -> %8d\n", pos_to_lm[i]+1, i+1);
   }
 
-
   // return how many removed
   return count;
 }
@@ -241,6 +257,8 @@ void SwapMinima(int dim_rates, double *rate_matrix, int a, int b)
     //fprintf(stderr, "swapping %5d %5d %d (%d)\n", a, b, dim_rates, i );
     // change lines:
     swap(rate_matrix[a*dim_rates+i], rate_matrix[b*dim_rates+i]);
+  }
+  for (int i=0; i<dim_rates; i++) {
     // change columns
     swap(rate_matrix[i*dim_rates+a], rate_matrix[i*dim_rates+b]);
   }
@@ -350,6 +368,8 @@ int RateGraph::RemoveShur(int x, int step)
     rate_matrix[i*dim_rates + i] = -sum;
   }
 
+  PrintRates("before_reorder.rat");
+
   // now resort matrix to have the minima to remove on bottom.
   int i=dim_rates-1;
   for (set<int>::reverse_iterator it=to_remove.rbegin(); it!=to_remove.rend(); it++, i--) {
@@ -360,6 +380,8 @@ int RateGraph::RemoveShur(int x, int step)
     swap(pos_to_lm[*it], pos_to_lm[i]);
     swap(lm_to_pos[pos_to_lm[*it]], lm_to_pos[pos_to_lm[i]]);
   }
+
+  PrintRates("after_reorder.rat");
 
   fprintf(stderr, "calling Shur %5d %5d\n", x, step );
 
@@ -382,7 +404,26 @@ int RateGraph::RemoveShur(int x, int step)
   }
   pos_to_lm.resize(res_dim);
 
+  // lastly, rewrite the "rates" data structure:
+  rates.clear();
+  for (int i=0; i<res_dim; i++) {
+    for (int j=i+1; j<res_dim; j++) {
+      if (rate_matrix[i*res_dim+j]>0) {
+        rates[i][j] = rate_matrix[i*res_dim+j];
+      }
+    }
+  }
+
   return x;
+}
+
+void RateGraph::PrintRates(char *filename)
+{
+  FILE *rate_file = fopen(filename, "w");
+  if (rate_file) {
+    PrintRates(rate_file);
+    fclose(rate_file);
+  }
 }
 
 void RateGraph::PrintRates(FILE *filname)
@@ -411,6 +452,43 @@ void RateGraph::PrintRates(FILE *filname)
     }
     fprintf(filname, "\n");
   }
+}
+
+void RateGraph::PrintDot(char *filename, bool to_eps)
+{
+  FILE *dot = fopen(filename, "w");
+  if (dot) {
+    PrintDot(dot);
+    fclose(dot);
+  }
+
+  if (to_eps) {
+    // start neato/dot:
+    char syst[200];
+    char filename2[200];
+    strcpy(filename2, filename);
+    filename2[strlen(filename2)-4]='\0';
+    sprintf(syst, "%s -Tps < %s > %s.eps", "dot", filename, filename2);
+    system(syst);
+  }
+}
+
+void RateGraph::PrintDot(FILE *dot)
+{
+  fprintf(dot, "Digraph G {\n\tnode [width=0.1, height=0.1, shape=circle];\n");
+  //nodes LM:
+  for (unsigned int i=0; i<rates.size(); i++) {
+    fprintf(dot, "\"%d\" [label=\"%d\"]\n", i+1, pos_to_lm[i]+1/*, lms[pos_to_lm[i]].energy*/);
+  }
+  fprintf(dot, "\n");
+
+  for (unsigned int i=0; i<rates.size(); i++) {
+    for (auto it=rates[i].begin(); it!=rates[i].end(); it++) {
+      // edges l-l
+      fprintf(dot, "\"%d\" -> \"%d\" [label=\"%6.4g\"]\n", i+1, (it->first)+1, it->second);
+    }
+  }
+  fprintf(dot, "\n}\n");
 }
 
 int RateGraph::ReadFilter(char *filename)
@@ -457,6 +535,13 @@ int RateGraph::ReadFilter(char *filename)
     fclose(file_filt);
   }
   return filter.size();
+}
+
+void RateGraph::PrintOutput(FILE *output)
+{
+  for (unsigned int i=0; i<pos_to_lm.size(); i++) {
+    fprintf(output, "%5d\n", pos_to_lm[i]+1);
+  }
 }
 
 DSU::DSU(FILE *input) {

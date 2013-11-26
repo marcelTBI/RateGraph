@@ -61,6 +61,8 @@ int main(int argc, char **argv)
         fclose(file);
       }
     }
+
+    rg.PrintOutput(stdout);
   }
 
   // barriers-like output

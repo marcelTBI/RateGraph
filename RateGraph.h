@@ -182,12 +182,16 @@ public:
   int ReadFilter(char *filename);
   int ConstructQueue(char order, int number_remove);
 
-  void PrintDot(FILE *filename); \todo
+  void PrintDot(FILE *dot);
+  void PrintDot(char *filename, bool to_eps);
 
   int RemoveOne(int rem_lm);
   int RemoveX(int x, int stop_fraction = 50);
   int RemoveShur(int x, int step);
 
+  void PrintRates(char *filename);
   void PrintRates(FILE *filname);
+
+  void PrintOutput(FILE *output);
 };
 #endif
